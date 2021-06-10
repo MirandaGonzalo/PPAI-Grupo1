@@ -1,5 +1,4 @@
 import datetime
-
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse
 from django.contrib.auth import login, authenticate, logout
@@ -17,3 +16,6 @@ from django.core.exceptions import ObjectDoesNotExist
 
 def landing_page(request):
     return render(request, 'index.html')
+
+def login(request):
+    return render(request, 'login/loginForm.html')
