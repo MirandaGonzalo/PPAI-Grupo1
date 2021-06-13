@@ -45,6 +45,15 @@ class Sede(models.Model):
     def __str__(self):
         return 'Sede: {}'.format(self.nombre)
 
+    
+    @classmethod
+    def getSedes(cls):
+        #queryset = cls.objects.raw('SELECT * FROM app_Sede')
+        # can use the below method also
+        # queryset = self.__class__.objects.all()   
+        queryset = Sede.objects.all()
+        return queryset
+
 class Empleado(models.Model):
     apellido = models.CharField(null=False, max_length=20)
     codigoValidacion = models.CharField(max_length=20)

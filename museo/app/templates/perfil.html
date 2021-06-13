@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block optionsNav %}
+  {% if user.is_authenticated %}
+      <a class="nav-link" href="{% url 'logOutUser' %}">Salir</a>
+  {% endif %}
+{% endblock %}
+{% block body%}
+<h3>Bienvenido</h3>
+<ul>
+{% for sede in sedes %}
+    <li>{{sede}}</li>
+{% endfor %}
+</ul>
+{% endblock body%}
