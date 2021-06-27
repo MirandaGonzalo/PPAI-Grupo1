@@ -20,8 +20,32 @@
         .footerMain{
             background-color: rgb(219, 234, 241);
         }
+        .backImgTicket{
+            background-color: rgb(243, 246, 247);
+        }
         .mainNav {
             background-color: rgb(227, 237, 242);
+        }
+        .cardExpoMainProfile {
+            position: absolute;
+            left: 28%;
+            top: 52%;
+            -webkit-transform: translate(-50%, -50%);
+            transform: translate(-50%, -50%);
+        }
+        .cardVentaMainProfile {
+            position: absolute;
+            left: 50%;
+            top: 52%;
+            -webkit-transform: translate(-50%, -50%);
+            transform: translate(-50%, -50%);
+        }
+        .cardSedeMainProfile{
+            position: absolute;
+            left: 72%;
+            top: 52%;
+            -webkit-transform: translate(-50%, -50%);
+            transform: translate(-50%, -50%);
         }
         .navbar-nav {
             margin-left: auto;
@@ -48,7 +72,9 @@
   <body>
     <div class="mainNav">
         <nav class="navbar navbar-expand-lg navbar-light border-bottom border-dark">
-            <a class="navbar-brand" href="{% url 'home' %}" style="font-size: 32px; font-family:'Times New Roman', Times, serif;">PPAI - Grupo 1</a>
+            <a class="navbar-brand" href="{% url 'loginForm' %}" style="font-size: 32px; font-family:'Times New Roman', Times, serif;">PPAI - Grupo 1</a>
+            {% block optionsNav2 %}                        
+            {% endblock %}
             <ul class="navbar-nav">
                 <li class="nav-itemSesion">
                     {% block optionsNav %}                        
