@@ -1,0 +1,22 @@
+
+<table class="table table-striped-sm">
+    <thead class="thead-light">
+    <tr>
+        <th>#</th>
+        <th>Monto</th>
+    </tr>
+    </thead>
+    <tbody>
+    
+    {% for a in listaEntradas %}
+    <tr>
+        <td>{{a}}</td>
+        <td>$ {{monto}}</td>
+    </tr>
+    {% endfor %}
+    <tr>
+        <td class="table-primary">Total </td>
+        <td class="table-primary">$ {{total}}</td>
+    </tr>
+    </tbody>
+</table>

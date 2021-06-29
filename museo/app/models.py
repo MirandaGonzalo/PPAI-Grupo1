@@ -1,8 +1,9 @@
 from django.db import models
 from django.conf import settings
 from datetime import datetime
-
+from datetime import date, time 
 # Create your models here.
+
 
 class Sede(models.Model):
     cantMaximaVisitantes = models.IntegerField(null=False)
@@ -24,14 +25,70 @@ class Sede(models.Model):
         return sede.cantMaximaVisitantes
 
     def getDatosTarifasVigentes(sede):
-        tarifas =  sede.tarifa_set.all()
+        tarifas = sede.tarifa_set.all()
         tarifasVigentes = []
         for a in tarifas:
-            resultado = Tarifa.esVigente(a)
+            resultado = a.esVigente()
             if (resultado):
                 tarifasVigentes.append(a)
         #return tarifasVigentes
         return tarifas
+
+    def calcularDuracionVisitaCompleta(sede):
+        exposicionesSede = sede.exposicion_set.all()
+        duracionVisitaTotal = 0
+        if (exposicionesSede.count() > 0):
+            for a in exposicionesSede:
+                es_vigente = Exposicion.esVigente(a)
+                if (es_vigente):
+                    duracionVisitaTotal += Exposicion.calcularDuracionResumidaXObra(a)
+        return duracionVisitaTotal
+
+    def calcularCantEntradasReservas(sede,fechaHoraActual):
+        reservas = sede.reservavisita_set.all()
+        cantAlumnosConfirmados = 0
+        if (reservas.count() > 0):
+            for a in reservas:
+                vigencia = ReservaVisita.esVigente(a,fechaHoraActual)
+                if (vigencia):
+                    cantAlumnosConfirmados += a.getCantAlumnosConfirmada()
+        return cantAlumnosConfirmados
+
+    def calcularCantVisitantesActuales(sede,fechaHoraActual):
+        entradasReserva = Sede.calcularCantEntradasReservas(sede,fechaHoraActual)
+        entradasParticuales = Sede.calcularCantEntradasParticulares(sede,fechaHoraActual)
+        return (entradasReserva + entradasParticuales)
+
+    def calcularCantEntradasParticulares(sede,fechaHoraActual):
+        return Entrada.estaEnMuseo(sede,fechaHoraActual)
+
+class ReservaVisita(models.Model):
+    cantAlumnos = models.IntegerField(null=False)
+    cantAlumnosConfirmada = models.IntegerField(null=False)
+    duracionEstimada = models.IntegerField(null=False)
+    fechaHoraCreacion = models.DateTimeField(auto_now_add=True)
+    fechaHoraReserva = models.DateTimeField(null=False)
+    horaFinReal = models.TimeField()
+    horaInicioReal = models.TimeField()
+    numeroReserva = models.IntegerField(null=False)
+    sede = models.ForeignKey(Sede, on_delete=models.CASCADE)
+
+    def esVigente(reserva, fechaHoraActual):
+        fechaReservaS = reserva.fechaHoraReserva
+        fechaReserva = datetime(fechaReservaS.year,fechaReservaS.month,fechaReservaS.day)
+        fechaActualSistema = datetime(fechaHoraActual.year,fechaHoraActual.month,fechaHoraActual.day)        
+        horaActualSistema = time(fechaHoraActual.hour,fechaHoraActual.minute,fechaHoraActual.second)
+        horaInicioRes = reserva.horaInicioReal
+        horaFinRes = reserva.horaFinReal
+        horaInicioR = time(horaInicioRes.hour, horaInicioRes.minute, horaInicioRes.second)
+        if (fechaReserva == fechaActualSistema):
+            if (horaInicioRes is not None and horaFinRes is None):
+                if (horaInicioR < horaActualSistema):
+                    return True
+        return False
+    
+    def getCantAlumnosConfirmada(self):
+        return self.cantAlumnosConfirmada
 
 class TipoVisita(models.Model):
     nombre = models.CharField(null=False, max_length=20)
@@ -90,24 +147,28 @@ class Tarifa(models.Model):
         return 'Monto: {} - Monto con Guia {}'.format(self.monto, self.montoAdicionalGuia)
 
 class Entrada(models.Model):
-    fechaVenta = models.DateTimeField()
-    horaVenta = models.TimeField()
-    monto = models.FloatField()
-    numero = models.AutoField(primary_key=True)
+    fechaVenta = models.DateTimeField(auto_now_add=True)
+    horaVenta = models.TimeField(null=False)
+    monto = models.FloatField(null=False)
+    numero = models.IntegerField(primary_key=True)
     tarifa = models.ForeignKey(Tarifa, on_delete=models.CASCADE)
     sede = models.ForeignKey(Sede, on_delete=models.CASCADE)
 
-    def esVigente(self):
-        """
-        falta hacer
-        """
-        return True
+    class Meta:
+        get_latest_by = ['numero']
+
+    def __str__(self):
+        return '{} - {}'.format(self.sede.nombre, self.numero)
+
+    def estaEnMuseo(sede,fechaHoraActual):
+        return Entrada.objects.filter(sede__id=sede.id,fechaVenta__year=fechaHoraActual.year, fechaVenta__month=fechaHoraActual.month,fechaVenta__day=fechaHoraActual.day).count()
 
     def getFechahora(self):
         return self.fechaVenta, self.horaVenta
 
-    def getNumero(self):
-        return self.numero
+    def getNumero():
+        return Entrada.objects.latest()
+
 
 class HorarioSede(models.Model):
     horaApertura = models.TimeField()
@@ -129,16 +190,30 @@ class Exposicion(models.Model):
     def __str__(self):
         return '{}'.format(self.nombre)
 
-    def esVigente(self):        
-        return True
+    def esVigente(exposicion):        
+        ahora = datetime.now()
+        fechaFin = exposicion.fechaFin
+        if (exposicion.fechaFinReplanificada is None):
+            fechaFinExposicion = datetime(fechaFin.year,fechaFin.month,fechaFin.day,fechaFin.hour,fechaFin.minute,fechaFin.second)        
+            if (fechaFinExposicion > ahora):
+                return True
+            return False
+        else:
+            fechaRep = exposicion.fechaFinReplanificada
+            fechaFinRep = datetime(fechaRep.year,fechaRep.month,fechaRep.day,fechaRep.hour,fechaRep.minute,fechaRep.second)
+            print (fechaFinRep)
+            if (fechaFinRep > ahora):
+                return True
+        return False
 
-    def calcularDuracionResumidaXObra(self):
-        detalles = DetalleExposicion.objects.filter(exposicion=self)
+    def calcularDuracionResumidaXObra(exposicion):
+        detalles = exposicion.detalleexposicion_set.all()
         total = 0
         for a in detalles:
             obra = Obra.objects.get(id=a.obra.id)
-            total += obra.duracionResumida
+            total += Obra.getDuracionResumida(obra)
         return total
+
 
 class Obra(models.Model):
     alto = models.FloatField()
@@ -186,12 +261,13 @@ class Empleado(models.Model):
         settings.AUTH_USER_MODEL, 
         on_delete=models.DO_NOTHING, null=True)
         
-    def getNombreSede(self):
-        return self.sede.cantMaxPorGuia
+    def getSede(self):
+        return self.sede
 
-    def getEmpleadoFromUsuario(usuario):
+    def conocerEmpleado(usuario):
         empleado = Empleado.objects.get(user=usuario)
         return empleado
+
 
     def __str__(self):
         return '{} {} - Sede: {}'.format(self.apellido, self.nombre, Empleado.getNombreSede(self))

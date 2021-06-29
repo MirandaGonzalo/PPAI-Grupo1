@@ -12,32 +12,61 @@
 {% endblock %}
 {% block body%}
 
-<h3>Seleccione la Tarifa</h3>
-<input type="hidden" name="idTarifa" id="idTarifa" value="-1">
-<table class="table table-striped">
-    <thead class="thead-dark">
-      <tr>
-        <th scope="col">Monto</th>
-        <th scope="col">Monto Adicional Guia</th>
-        <th scope="col">Tipo Visita</th>
-        <th scope="col">Tipo Entrada</th>
-        <th scope="col">Seleccionar</th>
-      </tr>
-    </thead>
-    <tbody>
-        {% for tarifa in tarifas %}
-      <tr>
-        <td>$ {{tarifa.monto}}</td>
-        <td>$ {{tarifa.montoAdicionalGuia}}</td>        
-        <td>{{tarifa.tipoVisita.mostrarNombre}}</td>
-        <td>{{tarifa.tipoEntrada.mostrarNombre}}</td>
-        <td><input class="form-check-input" name="fav_language" type="radio" onclick="seleccionarTarifa('{{tarifa.id}}')" id="flexCheckDefault"></td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-  <button type="button" class="btn btn-primary" id="btnConfirmarIdTarifa" style="visibility: hidden;">Confirmar</button>
+<div id="seleccionTarifa">
+  <h3>Seleccione la Tarifa</h3>
+  <input type="hidden" name="idTarifa" id="idTarifa" value="-1">
+  <table class="table table-striped">
+      <thead class="thead-dark">
+        <tr>
+          <th scope="col">Monto</th>
+          <th scope="col">Monto Adicional Guia</th>
+          <th scope="col">Tipo Visita</th>
+          <th scope="col">Tipo Entrada</th>
+          <th scope="col">Seleccionar</th>
+        </tr>
+      </thead>
+      <tbody>
+          {% for tarifa in tarifas %}
+        <tr>
+          <td>$ {{tarifa.monto}}</td>
+          <td>$ {{tarifa.montoAdicionalGuia}}</td>        
+          <td>{{tarifa.tipoVisita.mostrarNombre}}</td>
+          <td>{{tarifa.tipoEntrada.mostrarNombre}}</td>
+          <td><input class="form-check-input" name="fav_language" type="radio" onclick="seleccionarTarifa('{{tarifa.id}}')" id="flexCheckDefault"></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <button type="button" class="btn btn-primary" onclick="duracionVisita()" id="btnConfirmarIdTarifa" style="visibility: hidden;">Confirmar</button>
+</div>
 
+  <div id="divDuracion" style="visibility: hidden;">
+      <input id="inputDuracion" value="">
+      <input id="seleccionCantEntradas" min="1" value="1" type="number" placeholder="Cantidad de Entradas">
+      <div class="alert alert-danger" style="visibility: hidden;" role="alert" id="alertMsg">
+        La Cantidad Ingresada no es válida, excede la capacidad de la Sede.
+      </div>
+      <button type="button" class="btn btn-primary" onclick="tomarCantidad()" id="btnConfirmarCantEntrada">Confirmar</button>
+  </div>
+
+  <div class="modal" tabindex="-1" role="dialog" id="detalleVenta">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-body">
+          <div id="contenidoModal">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-primary" onclick="crearEntrada()">Confirmar</button>
+          <button type="button" class="btn btn-danger" data-dismiss="modal">Cancelar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <form id="form-imprimir" method="post" action="{% url 'imprimirEntrada' %}">
+    {% csrf_token %}
+  </form>
   <script>
       function seleccionarTarifa(id_tarifa){
           inputId = document.getElementById("idTarifa");
@@ -45,9 +74,81 @@
             btnIdTarifa = document.getElementById("btnConfirmarIdTarifa");
             btnIdTarifa.style.visibility = 'visible'    
           };
-          inputId.value = id_tarifa;
-          
-          
+          inputId.value = id_tarifa;   
       }
+
+      function duracionVisita(){
+        var duracion = 2;      
+        $.ajax({
+          url: "{% url 'calcularDuracionVisita' %}",
+          type: 'POST',
+          data: {csrfmiddlewaretoken: '{{ csrf_token }}'},
+          success: function(data){
+            //alert(data.duracion);
+            divSelTarifa = $('#seleccionTarifa');
+            divSelTarifa.hide();
+            btnIdTarifa = $('#btnConfirmarIdTarifa');
+            btnIdTarifa.hide();
+            inpDuracion = document.getElementById('inputDuracion'); 
+            inpDuracion.value = data.duracion;
+            divDuracion = document.getElementById('divDuracion'); 
+            divDuracion.style.visibility = "visible";
+          },
+          error: function (data) {
+              console.log("error")
+          }
+        });
+      }
+
+      function tomarCantidad(){
+        cantidad = $('#seleccionCantEntradas').val();
+        tarifa = $('#idTarifa').val(); 
+        $.ajax({
+          url: "{% url 'validarCantidadEntradas' %}",
+          type: 'POST',
+          data: {csrfmiddlewaretoken: '{{ csrf_token }}','cantidad':cantidad},
+          success: function(data){
+            if(data.estado){
+              $.ajax({
+                url: "{% url 'calcularTotalTarifas' %}",
+                type: 'POST',
+                data: {csrfmiddlewaretoken: '{{ csrf_token }}','cantidad':cantidad, 'tarifa':tarifa},
+                success: function(data){
+                  $("#contenidoModal").html(data);
+                  $('#detalleVenta').modal('show');
+                },
+                error: function (data) {
+                    console.log("error")
+                }
+              });
+            }else{
+              divError = document.getElementById('alertMsg'); 
+              divError.style.visibility = "visible";
+            };
+          },
+          error: function (data) {
+              console.log("error")
+          }
+        });
+        
+      }
+
+      function crearEntrada(){
+        cantidad = $('#seleccionCantEntradas').val();
+        tarifa = $('#idTarifa').val(); 
+        $.ajax({
+          url: "{% url 'crearEntrada' %}",
+          type: 'POST',
+          data: {csrfmiddlewaretoken: '{{ csrf_token }}','cantidad':cantidad, 'tarifa':tarifa},
+          success: function(data){
+            document.getElementById("form-imprimir").submit();
+          },
+          error: function (data) {
+              console.log("error")
+          }
+        });
+      }
+         
+
   </script>
 {% endblock body%}
