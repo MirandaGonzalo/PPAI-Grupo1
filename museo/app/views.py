@@ -18,13 +18,8 @@ from django.template.loader import render_to_string
 from django import forms
 from django.contrib import messages
 from .scriptBase import *
-
-
 from weasyprint import HTML
 
-
-def landing_page(request):
-    return render(request, 'index.html')
 
 def loginForm(request):
     return render(request, 'login/loginForm.html')
@@ -68,8 +63,8 @@ def validarCantidadEntradas(request):
         actualSede = GestorRegistrarVentaEntradas.buscarSedeActual(request)
         result = GestorRegistrarVentaEntradas.validarCantEntradas(actualSede,cantidadSolicitada)
         data = {
-            'estado': True
-        }
+            'estado': result
+        }        
         return JsonResponse(data)
     return JsonResponse(data)
 
@@ -78,7 +73,7 @@ def calcularTotalTarifas(request):
         'result' : 'Error, la operacion fracasó.',
         'estado': False
     }
-    if request.method == 'POST':
+    if request.method == 'POST':        
         cantidad = request.POST['cantidad']
         tarifa = request.POST['tarifa']
         cantidadSolicitada = int(cantidad)
@@ -92,6 +87,7 @@ def calcularTotalTarifas(request):
     return JsonResponse(data)
 
 entradas = []
+total = []
 def crearEntrada(request):
     data = {
         'result' : 'Error, la operacion fracasó.',
@@ -115,11 +111,15 @@ def crearEntrada(request):
         data = {
             'estado': True
         }
-        return GestorRegistrarVentaEntradas.imprimirEntrada(request,entradas)
+        totalAux = GestorRegistrarVentaEntradas.calcularTotalTarifas(cantidadSolicitada,tarifaSeleccionada.monto )
+        total.append(totalAux)        
     return JsonResponse(data)
 
 def imprimirEntrada(request):
-    return GestorRegistrarVentaEntradas.imprimirEntrada(request,entradas)
+    totalF = 0
+    for a in total:
+        totalF = a
+    return GestorRegistrarVentaEntradas.imprimirEntrada(request,entradas,totalF)
 
 def login(request):
     if request.method == 'POST':
@@ -131,7 +131,7 @@ def login(request):
         if user is not None:
             if user.is_active:
                 auth_login(request, user)
-                return redirect('perfil')
+                return redirect('registrarVentaEntrada')
         else:
             messages.error(request,'Los datos ingresados no son correctos.')
             return redirect('loginForm')

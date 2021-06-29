@@ -1,22 +1,23 @@
-
-<table class="table table-striped-sm">
-    <thead class="thead-light">
-    <tr>
-        <th>#</th>
-        <th>Monto</th>
-    </tr>
-    </thead>
-    <tbody>
-    
-    {% for a in listaEntradas %}
-    <tr>
-        <td>{{a}}</td>
-        <td>$ {{monto}}</td>
-    </tr>
-    {% endfor %}
-    <tr>
-        <td class="table-primary">Total </td>
-        <td class="table-primary">$ {{total}}</td>
-    </tr>
-    </tbody>
-</table>
+<div class="table-wrapper-scroll-y my-custom-scrollbar">
+    <table class="table table-striped-sm">
+        <thead class="thead-light">
+        <tr>
+            <th style="text-align: left;">#</th>
+            <th style="text-align: center;">Monto</th>
+        </tr>
+        </thead>
+        <tbody>
+        
+        {% for a in listaEntradas %}
+        <tr>
+            <td>{{a}}</td>
+            <td style="text-align: center;">$ {{monto}}</td>
+        </tr>
+        {% endfor %}
+        <tr>
+            <td class="table-primary"><strong>Total</strong></td>
+            <td style="text-align: center;" class="table-primary"><strong>$ {{total}}</strong></td>
+        </tr>
+        </tbody>
+    </table>
+</div>

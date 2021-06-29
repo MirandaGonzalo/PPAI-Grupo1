@@ -29,8 +29,8 @@ class GestorRegistrarVentaEntradas(models.Model):
 
     def validarCantEntradas(sede, cantidad):
         maxVisitantes = sede.getCantMaximaVisitantes()
-        fechaHoraActual = GestorRegistrarVentaEntradas.obtenerFechaHoraActual()
-        return (Sede.calcularCantVisitantesActuales(sede,fechaHoraActual) > maxVisitantes)
+        fechaHoraActual = GestorRegistrarVentaEntradas.obtenerFechaHoraActual()        
+        return (Sede.calcularCantVisitantesActuales(sede,fechaHoraActual) + cantidad < maxVisitantes)
     
     def calcularTotalTarifas(cantidad, monto):        
         return (float(cantidad) * float(monto))
@@ -44,13 +44,13 @@ class GestorRegistrarVentaEntradas(models.Model):
         ultima_entrada = Entrada.getNumero()
         return ultima_entrada.numero
 
-    def imprimirEntrada(request, entradas):
+    def imprimirEntrada(request, entradas,total):
         sede = GestorRegistrarVentaEntradas.buscarSedeActual(request)
-        html_string = render_to_string('imprimir.html', {'sede': sede})
+        html_string = render_to_string('imprimir.html', {'sede': sede,'entradas':entradas,'total':total})
         html = HTML(string=html_string)
         html.write_pdf(target='/tmp/detalleVenta.pdf')
         fs = FileSystemStorage('/tmp')
         with fs.open('detalleVenta.pdf') as pdf:
             response = HttpResponse(pdf, content_type='application/pdf')
-            response['Content-Disposition'] = 'attachment; filename="mypdf.pdf"'
+            response['Content-Disposition'] = 'attachment; filename="detalleMuseo.pdf"'
             return response

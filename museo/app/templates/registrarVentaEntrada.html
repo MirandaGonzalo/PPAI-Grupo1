@@ -1,57 +1,105 @@
 {% extends "base.html" %}
+{% load static %}
 
-{% block optionsNav2 %}
-  {% if user.is_authenticated %}      
-      <a class="navbar-brand" style="font-size: 32px; font-family:'Times New Roman', Times, serif;"> Sede {{sedeDelEmpleado}}</a>
-  {% endif %}
-{% endblock %}
 {% block optionsNav %}
-  {% if user.is_authenticated %}
+  {% if user.is_authenticated %}  
       <a class="nav-link" href="{% url 'logOutUser' %}">Salir</a>      
   {% endif %}
 {% endblock %}
 {% block body%}
 
-<div id="seleccionTarifa">
-  <h3>Seleccione la Tarifa</h3>
+<style>
+  .inputBuscador{
+    background-color: white;
+    background-repeat: no-repeat;
+  }
+
+  .seleccionarMensaje{
+    padding-left: 30px;
+  }
+  .contentLogIn {
+      position: absolute;
+      left: 49%;
+      top: 50%;
+      -webkit-transform: translate(-50%, -50%);
+      transform: translate(-50%, -50%);
+  }
+
+  .my-custom-scrollbar {
+      position: relative;
+      height: 200px;
+      overflow: auto;
+  }
+  .table-wrapper-scroll-y {
+    display: block;
+  }
+</style>
+
+<div id="seleccionTarifa" class="table-responsive">
+  <br>
+    <h3 class="seleccionarMensaje">Seleccione la Tarifa</h3>  
+    <br>
+    &nbsp
+    &nbsp
+    &nbsp
+    &nbsp
+    <input class="inputbuscador" type="text" id="inputBuscador" onkeyup="buscarRowTarifa()" placeholder="Buscar Tarifa ...">
+  <br>
+  <br>
   <input type="hidden" name="idTarifa" id="idTarifa" value="-1">
-  <table class="table table-striped">
+  <table class="table table-striped" cellspacing="0" width="100%">
       <thead class="thead-dark">
         <tr>
-          <th scope="col">Monto</th>
-          <th scope="col">Monto Adicional Guia</th>
-          <th scope="col">Tipo Visita</th>
-          <th scope="col">Tipo Entrada</th>
-          <th scope="col">Seleccionar</th>
+          <th class="text-center">Monto</th>
+          <th class="text-center">Monto Adicional Guia</th>
+          <th class="text-center">Tipo Visita</th>
+          <th class="text-center">Tipo Entrada</th>
+          <th class="text-center"></th>
         </tr>
       </thead>
-      <tbody>
+      <tbody id="tablaTarifas">
           {% for tarifa in tarifas %}
         <tr>
-          <td>$ {{tarifa.monto}}</td>
-          <td>$ {{tarifa.montoAdicionalGuia}}</td>        
-          <td>{{tarifa.tipoVisita.mostrarNombre}}</td>
-          <td>{{tarifa.tipoEntrada.mostrarNombre}}</td>
-          <td><input class="form-check-input" name="fav_language" type="radio" onclick="seleccionarTarifa('{{tarifa.id}}')" id="flexCheckDefault"></td>
+          <td style="text-align: center; vertical-align: middle;">$ {{tarifa.monto}}</td>
+          <td style="text-align: center; vertical-align: middle;">$ {{tarifa.montoAdicionalGuia}}</td>        
+          <td style="text-align: center; vertical-align: middle;">{{tarifa.tipoVisita.mostrarNombre}}</td>
+          <td style="text-align: center; vertical-align: middle;">{{tarifa.tipoEntrada.mostrarNombre}}</td>
+          <td style="text-align: center;"><input class="form-check-input" name="fav_language" type="radio" onclick="seleccionarTarifa('{{tarifa.id}}')" id="flexCheckDefault"></td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
-    <button type="button" class="btn btn-primary" onclick="duracionVisita()" id="btnConfirmarIdTarifa" style="visibility: hidden;">Confirmar</button>
+    <br>
+    <button type="button" class="btn btn-primary" onclick="duracionVisita()" id="btnConfirmarIdTarifa" style="visibility: hidden; float: right;">Confirmar</button>
 </div>
-
-  <div id="divDuracion" style="visibility: hidden;">
-      <input id="inputDuracion" value="">
-      <input id="seleccionCantEntradas" min="1" value="1" type="number" placeholder="Cantidad de Entradas">
-      <div class="alert alert-danger" style="visibility: hidden;" role="alert" id="alertMsg">
-        La Cantidad Ingresada no es válida, excede la capacidad de la Sede.
-      </div>
-      <button type="button" class="btn btn-primary" onclick="tomarCantidad()" id="btnConfirmarCantEntrada">Confirmar</button>
+ 
+  <input id="inputDuracion" value="" type="hidden">
+  <div id="divDuracion" class="contentLogIn" style="visibility: hidden;">
+        <div class="card">
+            <div class="card-header" style="background-color: rgb(175, 218, 238);">
+                <h3><center>Numero de Entradas</center></h3>
+            </div>
+            <div class="card-body">
+              <div class="input-group mb-3">
+                  <input id="seleccionCantEntradas" style="width: 280px;" min="1" value="1" type="number" placeholder="Cantidad de Entradas">
+                </div>              
+            </div>            
+            <div class="card-footer">
+                <center><button type="submit" class="btn btn-primary btn-lg" onclick="tomarCantidad()">Siguiente</button></center>
+            </div>
+        </div>   
+        <br>
+        <div class="alert alert-danger" style="display: none;" role="alert" id="alertMsg">
+          La Cantidad Ingresada no es válida.
+        </div>      
   </div>
 
   <div class="modal" tabindex="-1" role="dialog" id="detalleVenta">
     <div class="modal-dialog" role="document">
       <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Detalle Venta</h5>          
+        </div>
         <div class="modal-body">
           <div id="contenidoModal">
           </div>
@@ -68,6 +116,17 @@
     {% csrf_token %}
   </form>
   <script>
+
+      $(document).ready(function(){
+        $("#inputBuscador").on("keyup", function() {
+          var value = $(this).val().toLowerCase();
+          $("#tablaTarifas tr").filter(function() {
+            $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+          });
+        });
+      });      
+
+
       function seleccionarTarifa(id_tarifa){
           inputId = document.getElementById("idTarifa");
           if (inputId.value == "-1"){
@@ -107,7 +166,7 @@
           url: "{% url 'validarCantidadEntradas' %}",
           type: 'POST',
           data: {csrfmiddlewaretoken: '{{ csrf_token }}','cantidad':cantidad},
-          success: function(data){
+          success: function(data){            
             if(data.estado){
               $.ajax({
                 url: "{% url 'calcularTotalTarifas' %}",
@@ -122,8 +181,7 @@
                 }
               });
             }else{
-              divError = document.getElementById('alertMsg'); 
-              divError.style.visibility = "visible";
+              document.getElementById("alertMsg").style.display = "block";
             };
           },
           error: function (data) {
