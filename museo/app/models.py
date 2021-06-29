@@ -31,26 +31,26 @@ class Sede(models.Model):
             resultado = a.esVigente()
             if (resultado):
                 tarifasVigentes.append(a)
-        #return tarifasVigentes
-        return tarifas
+        return tarifasVigentes
 
     def calcularDuracionVisitaCompleta(sede):
         exposicionesSede = sede.exposicion_set.all()
         duracionVisitaTotal = 0
         if (exposicionesSede.count() > 0):
             for a in exposicionesSede:
-                es_vigente = Exposicion.esVigente(a)
+                es_vigente = Exposicion.esVigente(a)                
                 if (es_vigente):
                     duracionVisitaTotal += Exposicion.calcularDuracionResumidaXObra(a)
         return duracionVisitaTotal
 
-    def calcularCantEntradasReservas(sede,fechaHoraActual):
+    def calcularCantEntradasReservas(sede,fechaHoraActual):        
         reservas = sede.reservavisita_set.all()
+        print (sede)
         cantAlumnosConfirmados = 0
         if (reservas.count() > 0):
             for a in reservas:
                 vigencia = ReservaVisita.esVigente(a,fechaHoraActual)
-                if (vigencia):
+                if (vigencia):                  
                     cantAlumnosConfirmados += a.getCantAlumnosConfirmada()
         return cantAlumnosConfirmados
 
@@ -68,8 +68,8 @@ class ReservaVisita(models.Model):
     duracionEstimada = models.IntegerField(null=False)
     fechaHoraCreacion = models.DateTimeField(auto_now_add=True)
     fechaHoraReserva = models.DateTimeField(null=False)
-    horaFinReal = models.TimeField()
-    horaInicioReal = models.TimeField()
+    horaFinReal = models.TimeField(null=True)
+    horaInicioReal = models.TimeField(null=True)
     numeroReserva = models.IntegerField(null=False)
     sede = models.ForeignKey(Sede, on_delete=models.CASCADE)
 
@@ -82,16 +82,15 @@ class ReservaVisita(models.Model):
         horaFinRes = reserva.horaFinReal
         horaInicioR = time(horaInicioRes.hour, horaInicioRes.minute, horaInicioRes.second)
         if (fechaReserva == fechaActualSistema):
-            if (horaInicioRes is not None and horaFinRes is None):
-                if (horaInicioR < horaActualSistema):
-                    return True
+            if (horaInicioRes < horaActualSistema and horaActualSistema < horaFinRes):
+                return True
         return False
     
     def getCantAlumnosConfirmada(self):
         return self.cantAlumnosConfirmada
 
 class TipoVisita(models.Model):
-    nombre = models.CharField(null=False, max_length=20)
+    nombre = models.CharField(null=False, max_length=25)
 
     def mostrarNombre(self):
         return self.nombre
@@ -100,7 +99,7 @@ class TipoVisita(models.Model):
         return 'Tipo de Visita: {}'.format(self.nombre)
 
 class TipoEntrada(models.Model):
-    nombre = models.CharField(null=False, max_length=20)
+    nombre = models.CharField(null=False, max_length=25)
 
     def mostrarNombre(self):
         return self.nombre
@@ -117,6 +116,9 @@ class Tarifa(models.Model):
     tipoEntrada = models.ForeignKey(TipoEntrada, on_delete=models.CASCADE) 
     sede = models.ForeignKey(Sede, on_delete=models.CASCADE)
     
+    def __str__(self):
+        return '{} - {} - {}'.format(self.tipoVisita.nombre, self.tipoEntrada.nombre, self.sede.nombre)
+
     def conocerTipoEntrada(self):
         return self.tipoEntrada.mostrarNombre()
 
@@ -132,8 +134,10 @@ class Tarifa(models.Model):
     def esVigente(tarifa):        
         ahora = datetime.now()
         fechafinVigencia = tarifa.fechaFinVigencia
-        x = datetime(fechafinVigencia.year,fechafinVigencia.month,fechafinVigencia.day,fechafinVigencia.hour,fechafinVigencia.minute,fechafinVigencia.second)        
-        if (x > ahora):
+        fechainicioVigencia = tarifa.fechaInicioVigencia
+        finV = datetime(fechafinVigencia.year,fechafinVigencia.month,fechafinVigencia.day,fechafinVigencia.hour,fechafinVigencia.minute,fechafinVigencia.second)
+        inicioV = datetime(fechainicioVigencia.year,fechainicioVigencia.month,fechainicioVigencia.day,fechainicioVigencia.hour,fechainicioVigencia.minute,fechainicioVigencia.second)        
+        if (inicioV < ahora and ahora < finV):
             return True
         return False
 
@@ -143,8 +147,6 @@ class Tarifa(models.Model):
         queryset = Tarifa.objects.all()
         return queryset
 
-    def __str__(self):
-        return 'Monto: {} - Monto con Guia {}'.format(self.monto, self.montoAdicionalGuia)
 
 class Entrada(models.Model):
     fechaVenta = models.DateTimeField(auto_now_add=True)
@@ -180,7 +182,7 @@ class HorarioSede(models.Model):
 class Exposicion(models.Model):
     fechaFin = models.DateTimeField()
     fechaFinReplanificada = models.DateTimeField()
-    fechaIncio = models.DateTimeField()
+    fechaInicio = models.DateTimeField()
     fechaInicioReplanificada = models.DateTimeField()
     horaApertura = models.TimeField()
     horaCierre = models.TimeField()
@@ -193,6 +195,20 @@ class Exposicion(models.Model):
     def esVigente(exposicion):        
         ahora = datetime.now()
         fechaFin = exposicion.fechaFin
+        fechaIni = exposicion.fechaInicio
+        fechaInicioExposicion = datetime(fechaIni.year,fechaIni.month,fechaIni.day,fechaIni.hour,fechaIni.minute,fechaIni.second)        
+        if (exposicion.fechaInicioReplanificada is None):
+            if (ahora > fechaIni):
+                pass
+            else:
+                return False
+        else:
+            fechaIniRep = exposicion.fechaInicioReplanificada
+            fechaIRep = datetime(fechaIniRep.year,fechaIniRep.month,fechaIniRep.day,fechaIniRep.hour,fechaIniRep.minute,fechaIniRep.second)
+            if (ahora > fechaIRep):
+                pass
+            else:
+                return False        
         if (exposicion.fechaFinReplanificada is None):
             fechaFinExposicion = datetime(fechaFin.year,fechaFin.month,fechaFin.day,fechaFin.hour,fechaFin.minute,fechaFin.second)        
             if (fechaFinExposicion > ahora):
@@ -201,11 +217,10 @@ class Exposicion(models.Model):
         else:
             fechaRep = exposicion.fechaFinReplanificada
             fechaFinRep = datetime(fechaRep.year,fechaRep.month,fechaRep.day,fechaRep.hour,fechaRep.minute,fechaRep.second)
-            print (fechaFinRep)
             if (fechaFinRep > ahora):
                 return True
         return False
-
+    
     def calcularDuracionResumidaXObra(exposicion):
         detalles = exposicion.detalleexposicion_set.all()
         total = 0
@@ -227,6 +242,9 @@ class Obra(models.Model):
     nombreObra = models.CharField(max_length=20)
     peso = models.FloatField()
     valuacion = models.FloatField()
+
+    def __str__(self):
+        return '{}'.format(self.nombreObra)
 
     def getDuracionResumida(self):
         return self.duracionResumida
@@ -270,4 +288,4 @@ class Empleado(models.Model):
 
 
     def __str__(self):
-        return '{} {} - Sede: {}'.format(self.apellido, self.nombre, Empleado.getNombreSede(self))
+        return '{} {} - Sede: {}'.format(self.apellido, self.nombre, Empleado.getSede(self))

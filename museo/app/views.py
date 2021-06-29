@@ -24,11 +24,6 @@ from weasyprint import HTML
 def loginForm(request):
     return render(request, 'login/loginForm.html')
 
-def perfil(request):
-    sedeDelEmpleado = GestorRegistrarVentaEntradas.buscarSedeActual(request)
-    empleado = Empleado.conocerEmpleado(request.user)
-    return render(request, 'perfil.html', {'empleado':empleado,'sedeDelEmpleado':sedeDelEmpleado})
-
 def logOutUser(request):
     logout(request)
     return redirect(loginForm)
@@ -104,6 +99,7 @@ def crearEntrada(request):
         fechaVenta = datetime(fechaActual.year, fechaActual.month, fechaActual.day)
         horaVenta = time(fechaActual.hour, fechaActual.minute, fechaActual.second)
         actualSede = GestorRegistrarVentaEntradas.buscarSedeActual(request)
+        del entradas[:]
         for i in range(0,cantidadSolicitada):
             numero = (GestorRegistrarVentaEntradas.buscarUltimoNroEntrada() + 1)
             entrada = GestorRegistrarVentaEntradas.crearEntrada(fechaVenta, horaVenta, tarifaSeleccionada.monto, numero,actualSede,tarifaSeleccionada) 
@@ -120,6 +116,41 @@ def imprimirEntrada(request):
     for a in total:
         totalF = a
     return GestorRegistrarVentaEntradas.imprimirEntrada(request,entradas,totalF)
+
+def pantallaSala(request):
+    actualSede = GestorRegistrarVentaEntradas.buscarSedeActual(request)
+    print (actualSede)
+    fechaHoraActual = GestorRegistrarVentaEntradas.obtenerFechaHoraActual()
+    ocupado = Sede.calcularCantVisitantesActuales(actualSede,fechaHoraActual)
+    print (ocupado)
+    particulares = Sede.calcularCantEntradasParticulares(actualSede,fechaHoraActual)
+    reservas = Sede.calcularCantEntradasReservas(actualSede,fechaHoraActual)
+    disponible = (actualSede.cantMaximaVisitantes - ocupado)
+    return render(request, 'pantalla/sala.html', {'disponible':disponible, 'ocupados':ocupado, 'particulares':particulares,'reservas':reservas})
+
+def pantallaSede(request):
+    actualSede = GestorRegistrarVentaEntradas.buscarSedeActual(request)
+    fechaHoraActual = GestorRegistrarVentaEntradas.obtenerFechaHoraActual()
+    ocupado = Sede.calcularCantVisitantesActuales(actualSede,fechaHoraActual)
+    particulares = Sede.calcularCantEntradasParticulares(actualSede,fechaHoraActual)
+    reservas = Sede.calcularCantEntradasReservas(actualSede,fechaHoraActual)
+    disponible = actualSede.cantMaximaVisitantes - ocupado
+    return render(request, 'pantalla/sede.html', {'disponible':disponible, 'ocupados':ocupado, 'particulares':particulares,'reservas':reservas})
+
+
+def actualizarPantallas(request):
+    data = {
+            'estado': False
+    }
+    if request.method == 'POST':
+        actualSede = GestorRegistrarVentaEntradas.buscarSedeActual(request)
+        fechaHoraActual = GestorRegistrarVentaEntradas.obtenerFechaHoraActual()
+        cantidad = Sede.calcularCantVisitantesActuales(actualSede,fechaHoraActual)
+        GestorRegistrarVentaEntradas.actualizarPantallas(cantidad)
+        data = {
+            'estado': True
+        }
+    return JsonResponse(data)
 
 def login(request):
     if request.method == 'POST':

@@ -1,4 +1,5 @@
 from .models import *
+from .pantalla import *
 from django.core.files.storage import FileSystemStorage
 from django.http import HttpResponse
 from django.template.loader import render_to_string
@@ -30,7 +31,7 @@ class GestorRegistrarVentaEntradas(models.Model):
     def validarCantEntradas(sede, cantidad):
         maxVisitantes = sede.getCantMaximaVisitantes()
         fechaHoraActual = GestorRegistrarVentaEntradas.obtenerFechaHoraActual()        
-        return (Sede.calcularCantVisitantesActuales(sede,fechaHoraActual) + cantidad < maxVisitantes)
+        return (Sede.calcularCantVisitantesActuales(sede,fechaHoraActual) + cantidad <= maxVisitantes)
     
     def calcularTotalTarifas(cantidad, monto):        
         return (float(cantidad) * float(monto))
@@ -54,3 +55,8 @@ class GestorRegistrarVentaEntradas(models.Model):
             response = HttpResponse(pdf, content_type='application/pdf')
             response['Content-Disposition'] = 'attachment; filename="detalleMuseo.pdf"'
             return response
+
+    def actualizarPantallas(cantidad):
+        PantallaSala.actualizarCantVisitantes(cantidad)
+        PantallaEntrada.actualizarCantVisitantes(cantidad)
+        return True

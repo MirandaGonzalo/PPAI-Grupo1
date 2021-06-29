@@ -14,5 +14,7 @@ urlpatterns = [
     path('calcularTotalTarifas/', calcularTotalTarifas, name='calcularTotalTarifas'),
     path('crearEntrada/', crearEntrada, name='crearEntrada'),
     path('imprimirEntrada/', imprimirEntrada, name='imprimirEntrada'),
-    path('perfil/', perfil, name='perfil')
+    path('pantallaSala/', pantallaSala, name='pantallaSala'),
+    path('pantallaSede/', pantallaSede, name='pantallaSede'),
+    path('actualizarPantallas/', actualizarPantallas, name='actualizarPantallas')
 ]

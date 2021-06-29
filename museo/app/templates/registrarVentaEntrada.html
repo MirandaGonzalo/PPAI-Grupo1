@@ -1,9 +1,15 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block optionsNav %}
+{% block optionsNav2 %}
   {% if user.is_authenticated %}  
-      <a class="nav-link" href="{% url 'logOutUser' %}">Salir</a>      
+    <a class="nav-link" href="{% url 'pantallaSala' %}">Pantalla Sala</a>
+    <a class="nav-link" href="{% url 'pantallaSede' %}">Pantalla Entrada</a>  
+  {% endif %}                        
+{% endblock %}
+{% block optionsNav %}
+  {% if user.is_authenticated %}      
+    <a class="nav-link" href="{% url 'logOutUser' %}">Salir</a>      
   {% endif %}
 {% endblock %}
 {% block body%}
@@ -43,7 +49,7 @@
     &nbsp
     &nbsp
     &nbsp
-    <input class="inputbuscador" type="text" id="inputBuscador" onkeyup="buscarRowTarifa()" placeholder="Buscar Tarifa ...">
+    <input class="inputbuscador" type="text" id="inputBuscador" placeholder="Buscar Tarifa ...">
   <br>
   <br>
   <input type="hidden" name="idTarifa" id="idTarifa" value="-1">
@@ -77,7 +83,7 @@
   <div id="divDuracion" class="contentLogIn" style="visibility: hidden;">
         <div class="card">
             <div class="card-header" style="background-color: rgb(175, 218, 238);">
-                <h3><center>Numero de Entradas</center></h3>
+                <h3><center>Número de Entradas</center></h3>
             </div>
             <div class="card-body">
               <div class="input-group mb-3">
@@ -194,12 +200,14 @@
       function crearEntrada(){
         cantidad = $('#seleccionCantEntradas').val();
         tarifa = $('#idTarifa').val(); 
+        $("#contenidoModal").html('Cargando ...');
         $.ajax({
           url: "{% url 'crearEntrada' %}",
           type: 'POST',
           data: {csrfmiddlewaretoken: '{{ csrf_token }}','cantidad':cantidad, 'tarifa':tarifa},
           success: function(data){
             document.getElementById("form-imprimir").submit();
+            $("#contenidoModal").html('Comprobante creado con éxito.');
           },
           error: function (data) {
               console.log("error")
